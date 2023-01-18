@@ -1,6 +1,7 @@
 ######################
 # Project Specific
 ######################
+/src/main/webapp/content/css/main.css
 /target/classes/static/**
 /src/test/javascript/coverage/
 
@@ -156,3 +157,10 @@ Desktop.ini
 ######################
 /coverage/
 /.nyc_output/
+
+######################
+# Vault
+######################
+# Ignore Vault data and logs
+src/main/docker/vault-config/data
+src/main/docker/vault-config/logs

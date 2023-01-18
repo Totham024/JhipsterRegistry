@@ -1,157 +1,135 @@
-# ClientService
+# JHipster Registry
 
-This application was generated using JHipster 7.9.3, you can find documentation and help at [https://www.jhipster.tech/documentation-archive/v7.9.3](https://www.jhipster.tech/documentation-archive/v7.9.3).
+[![Build Status][github-actions-build]][github-actions-url] [![Docker Status][github-actions-docker]][github-actions-url] [![Docker Pulls](https://img.shields.io/docker/pulls/jhipster/jhipster-registry.svg)](https://hub.docker.com/r/jhipster/jhipster-registry/)
 
-This is a "microservice" application intended to be part of a microservice architecture, please refer to the [Doing microservices with JHipster][] page of the documentation for more information.
-This application is configured for Service Discovery and Configuration with the JHipster-Registry. On launch, it will refuse to start if it is not able to connect to the JHipster-Registry at [http://localhost:8761](http://localhost:8761). For more information, read our documentation on [Service Discovery and Configuration with the JHipster-Registry][].
+This is the [JHipster](https://www.jhipster.tech/) registry service, based on [Spring Cloud Netflix](https://cloud.spring.io/spring-cloud-netflix/), [Eureka](https://github.com/Netflix/eureka) and [Spring Cloud Config](https://cloud.spring.io/spring-cloud-config/).
 
-## Project Structure
+Full documentation is available on the [JHipster documentation for microservices](https://www.jhipster.tech/microservices-architecture).
 
-Node is required for generation and recommended for development. `package.json` is always generated for a better development experience with prettier, commit hooks, scripts and so on.
+## Deploy to Heroku
 
-In the project root, JHipster generates configuration files for tools like git, prettier, eslint, husky, and others that are well known and you can find references in the web.
+Click this button to deploy your own instance of the registry:
 
-`/src/*` structure follows default Java structure.
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
 
-- `.yo-rc.json` - Yeoman configuration file
-  JHipster configuration is stored in this file at `generator-jhipster` key. You may find `generator-jhipster-*` for specific blueprints configuration.
-- `.yo-resolve` (optional) - Yeoman conflict resolver
-  Allows to use a specific action when conflicts are found skipping prompts for files that matches a pattern. Each line should match `[pattern] [action]` with pattern been a [Minimatch](https://github.com/isaacs/minimatch#minimatch) pattern and action been one of skip (default if ommited) or force. Lines starting with `#` are considered comments and are ignored.
-- `.jhipster/*.json` - JHipster entity configuration files
-- `/src/main/docker` - Docker configurations for the application and services that the application depends on
+There are a few limitations when deploying to Heroku.
 
-## Development
+- The registry will only work with [native configuration](https://www.jhipster.tech/jhipster-registry/#spring-cloud-config) (and not Git config).
+- The registry service cannot be scaled up to multiple dynos to provide redundancy. You must deploy multiple applications (i.e. click the button more than once). This is because Eureka requires distinct URLs to synchronize in-memory state between instances.
 
-To start your application in the dev profile, run:
+## Running locally
 
-```
-./mvnw
-```
+To run the cloned repository;
 
-For further instructions on how to develop with JHipster, have a look at [Using JHipster in development][].
+- For development run `./mvnw -Pdev,webapp` to just start in development or run `./mvnw` and run `npm install && npm start` for hot reload of client side code.
+- For production profile run `./mvnw -Pprod`
 
-### JHipster Control Center
+[github-actions-build]: https://github.com/jhipster/jhipster-registry/workflows/Build/badge.svg
+[github-actions-docker]: https://github.com/jhipster/jhipster-registry/workflows/Docker%20Image/badge.svg
+[github-actions-url]: https://github.com/jhipster/jhipster-registry/actions
 
-JHipster Control Center can help you manage and control your application(s). You can start a local control center server (accessible on http://localhost:7419) with:
+## HashiCorp Vault Integration
 
-```
-docker-compose -f src/main/docker/jhipster-control-center.yml up
-```
+### Development Mode
 
-## Building for production
+`JHipster Registry` default integration uses a `vault` server with an in-memory backend. The data shall not be persisted and shall require you to configure secrets after every restart. The in-memory configuration provides an easy way to test out the integration and later switch to the recommended server mode.
 
-### Packaging as jar
+- Start vault server docker container:
 
-To build the final jar and optimize the ClientService application for production, run:
-
-```
-./mvnw -Pprod clean verify
+```shell
+docker-compose -f src/main/docker/vault.yml up -d
 ```
 
-To ensure everything worked, run:
+- The default configured root token is `jhipster-registry`. We shall use the default secrets engine backend mounted on the `secrets` path. Configure secrets using either of `ui`, `cli` or `http`.
+- Create a new secret sub-path `jhipster-registry/dev` and add the following secret in JSON format. Here `jhipster-registry` refers to the application name and `dev` refers to the development profile. Do follow the same convention to configure secrets of other applications.
 
-```
-java -jar target/*.jar
-```
-
-Refer to [Using JHipster in production][] for more details.
-
-### Packaging as war
-
-To package your application as a war in order to deploy it to an application server, run:
-
-```
-./mvnw -Pprod,war clean verify
+```json
+{
+  "spring.security.user.password": "admin123!"
+}
 ```
 
-## Testing
+- Start `JHipster Registry` server in development mode using the following command (skipping execution of test cases):
 
-To launch your application's tests, run:
-
-```
-./mvnw verify
+```shell
+./mvnw -DskipTests
 ```
 
-For more information, refer to the [Running tests page][].
+- After successful start, open `http://localhost:8761/` in a browser. You shall require entering a new password as provided in the above vault configuration.
 
-### Code quality
+### Server Mode
 
-Sonar is used to analyse code quality. You can start a local Sonar server (accessible on http://localhost:9001) with:
+`JHipster Registry` also provides configuration to use the native file system as the persistent backend.
 
-```
-docker-compose -f src/main/docker/sonar.yml up -d
-```
+- Uncomment the following configurations in [vault.yml](src/main/docker/vault.yml). You can refer [config.hcl](src/main/docker/vault-config/config/config.hcl) to view provided vault server configurations:
 
-Note: we have turned off authentication in [src/main/docker/sonar.yml](src/main/docker/sonar.yml) for out of the box experience while trying out SonarQube, for real use cases turn it back on.
-
-You can run a Sonar analysis with using the [sonar-scanner](https://docs.sonarqube.org/display/SCAN/Analyzing+with+SonarQube+Scanner) or by using the maven plugin.
-
-Then, run a Sonar analysis:
-
-```
-./mvnw -Pprod clean verify sonar:sonar
+```yml
+command: server
+volumes:
+  - ./vault-config/config:/vault/config
+  - ./vault-config/logs:/vault/logs
+  - ./vault-config/data:/vault/file
 ```
 
-If you need to re-run the Sonar phase, please be sure to specify at least the `initialize` phase since Sonar properties are loaded from the sonar-project.properties file.
+- Start vault server docker container:
 
-```
-./mvnw initialize sonar:sonar
-```
-
-For more information, refer to the [Code quality page][].
-
-## Using Docker to simplify development (optional)
-
-You can use Docker to improve your JHipster development experience. A number of docker-compose configuration are available in the [src/main/docker](src/main/docker) folder to launch required third party services.
-
-For example, to start a mysql database in a docker container, run:
-
-```
-docker-compose -f src/main/docker/mysql.yml up -d
+```shell
+docker-compose -f src/main/docker/vault.yml up -d
 ```
 
-To stop it and remove the container, run:
+- Open `vault` server [`ui`](http://localhost:8200/ui/vault/init) to initialize master key shares. In this guide, we shall enter `1` as the number of key shares and `1` as the key threshold value. Do refer to vault documentation for recommended configuration. Note down the initial `root token` and the `key` and keep it at a safe place. You shall require the `key` to unseal the vault server after a restart.
+- Enable secret engine backend `kv` and use `secret` as the mount path.
+- Create a new secret sub-path `jhipster-registry/dev` and add the following secrets in JSON format. Here `jhipster-registry` refers to the application name and `dev` refers to the development profile. Do follow the same convention to configure secrets of other applications.
 
-```
-docker-compose -f src/main/docker/mysql.yml down
-```
-
-You can also fully dockerize your application and all the services that it depends on.
-To achieve this, first build a docker image of your app by running:
-
-```
-npm run java:docker
+```json
+{
+  "spring.security.user.password": "admin123!"
+}
 ```
 
-Or build a arm64 docker image when using an arm64 processor os like MacOS with M1 processor family running:
+- In this guide, we shall use the `token` authentication mechanism to retrieve secrets from the `vault` server. Update `bootstrap.yml` to specify `root token` in place of default dev token.
 
-```
-npm run java:docker:arm64
-```
-
-Then run:
-
-```
-docker-compose -f src/main/docker/app.yml up -d
+```yaml
+vault:
+  authentication: token
+  token: jhipster-registry # In server mode, provide a token having read access on secrets
 ```
 
-When running Docker Desktop on MacOS Big Sur or later, consider enabling experimental `Use the new Virtualization framework` for better processing performance ([disk access performance is worse](https://github.com/docker/roadmap/issues/7)).
+- Start `JHipster Registry` server in development mode using the following command (skipping execution of test cases):
 
-For more information refer to [Using Docker and Docker-Compose][], this page also contains information on the docker-compose sub-generator (`jhipster docker-compose`), which is able to generate docker configurations for one or several JHipster applications.
+```shell
+./mvnw -DskipTests
+```
 
-## Continuous Integration (optional)
+- After successful start, you shall require entering a new password as provided in vault.
 
-To configure CI for your project, run the ci-cd sub-generator (`jhipster ci-cd`), this will let you generate configuration files for a number of Continuous Integration systems. Consult the [Setting up Continuous Integration][] page for more information.
+## OAuth 2.0 and OpenID Connect
 
-[jhipster homepage and latest documentation]: https://www.jhipster.tech
-[jhipster 7.9.3 archive]: https://www.jhipster.tech/documentation-archive/v7.9.3
-[doing microservices with jhipster]: https://www.jhipster.tech/documentation-archive/v7.9.3/microservices-architecture/
-[using jhipster in development]: https://www.jhipster.tech/documentation-archive/v7.9.3/development/
-[service discovery and configuration with the jhipster-registry]: https://www.jhipster.tech/documentation-archive/v7.9.3/microservices-architecture/#jhipster-registry
-[using docker and docker-compose]: https://www.jhipster.tech/documentation-archive/v7.9.3/docker-compose
-[using jhipster in production]: https://www.jhipster.tech/documentation-archive/v7.9.3/production/
-[running tests page]: https://www.jhipster.tech/documentation-archive/v7.9.3/running-tests/
-[code quality page]: https://www.jhipster.tech/documentation-archive/v7.9.3/code-quality/
-[setting up continuous integration]: https://www.jhipster.tech/documentation-archive/v7.9.3/setting-up-ci/
-[node.js]: https://nodejs.org/
-[npm]: https://www.npmjs.com/
+OAuth is a stateful security mechanism, like HTTP Session. Spring Security provides excellent OAuth 2.0 and OIDC support, and this is leveraged by JHipster. If you’re not sure what OAuth and OpenID Connect (OIDC) are, please see [What the Heck is OAuth?](https://developer.okta.com/blog/2017/06/21/what-the-heck-is-oauth)
+
+Please note that [JSON Web Token (JWT)](https://jwt.io/) is the default option when using the JHipster Registry. It has to be started with **oauth2** spring profile to enable the OAuth authentication.
+
+In order to run your JHipster Registry with OAuth 2.0 and OpenID Connect:
+
+- For development run `SPRING_PROFILES_ACTIVE=dev,oauth2,native ./mvnw`
+- For production you can use environment variables. For example:
+
+```
+export SPRING_PROFILES_ACTIVE=prod,oauth2,api-docs
+```
+
+### Keycloak
+
+[Keycloak](https://www.keycloak.org/) is the default OpenID Connect server configured with JHipster.
+
+If you want to use Keycloak, you can follow the [documentation for Keycloak](https://www.jhipster.tech/security/#keycloak)
+
+### Okta
+
+If you'd like to use [Okta](https://www.okta.com/) instead of Keycloak, you can follow the [documentation for Okta](https://www.jhipster.tech/security/#okta)
+
+### Auth0
+
+If you'd like to use [Auth0](https://auth0.com/) instead of Keycloak, you can follow the [documentation for Auth0](https://www.jhipster.tech/security/#auth0)
+
+\*NOTE: Using the JHipster Registry, add URLs for port 8761 too ("Allowed Callback URLs" and "Allowed Logout URLs")
